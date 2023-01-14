@@ -1,4 +1,4 @@
-module github.com/dp3why/around
+module github.com/dp3why/go-app
 
 go 1.18
 
