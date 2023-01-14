@@ -1,16 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
-
-	"context"
 
 	"cloud.google.com/go/storage"
 	"github.com/pborman/uuid"
@@ -31,12 +31,14 @@ type Post struct {
 	  Url    string `json:"url"`
 }
 
+
+var ES_URL string = fmt.Sprintf("http://%s:9200/", os.Getenv("ES_URL"))
+var BUCKET_NAME string =  os.Getenv("BUCKET_NAME")
+
 const (
 	INDEX = "around"
 	TYPE = "post"
 	DISTANCE = "200km"
-	ES_URL = "http://35.212.238.117:9200/"
-	BUCKET_NAME = "go-app-b1121"
 )
 
 
@@ -129,7 +131,8 @@ func handlerPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := uuid.New()
-	// parse image data from form
+
+	// parse form data - image  
 	file, _, err := r.FormFile("image")
 	if err != nil {
 		http.Error(w, "Image is not available", http.StatusInternalServerError)
@@ -138,7 +141,7 @@ func handlerPost(w http.ResponseWriter, r *http.Request) {
  }
  	defer file.Close()
 
-	// context
+	// use context, saveToGCS
 	ctx := context.Background()
 	_, attrs, err := saveToGCS(ctx, file, BUCKET_NAME, id)
       if err != nil {
@@ -146,8 +149,9 @@ func handlerPost(w http.ResponseWriter, r *http.Request) {
              fmt.Printf("GCS is not setup %v\n", err)
              return
       }
-	
+	// update p with the newly generated link of image
 	p.Url = attrs.MediaLink
+
     saveToES(p, id)
 
     // saveToBigTable(p, id)
